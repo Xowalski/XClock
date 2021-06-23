@@ -1,0 +1,405 @@
+﻿<Window x:Class="XClock.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:local="clr-namespace:XClock"
+        xmlns:vm="clr-namespace:XClock.ViewModel;assembly=XClock.ViewModel"
+        mc:Ignorable="d"
+        Title="XClockMainWindow" Height="400" Width="400" ResizeMode="NoResize"
+        Background="Transparent" Opacity="0.9" AllowsTransparency="True" WindowStyle="None">
+    <i:Interaction.Behaviors>
+        <local:MovingWindow/>
+        <local:BehClosingWindowButton Button="{Binding ElementName=btnClose}"/>
+    </i:Interaction.Behaviors>
+    <Window.DataContext>
+        <vm:XClockVM/>
+    </Window.DataContext>
+    <Window.InputBindings>
+        <KeyBinding Command="{Binding ElementName=alarmDB, Path=Show}" Key="A"/>
+        <KeyBinding Command="{Binding PlayPomodoroCommand}" Key="P"/>
+        <KeyBinding Command="{Binding ElementName=pomodoroSettingsDB, Path=Show}" Key="S"/>
+    </Window.InputBindings>
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Foreground" Value="WhiteSmoke"/>
+            <Setter Property="FontFamily" Value="Calibri"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Opacity="0.5"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="Line">
+            <Setter Property="Stroke" Value="WhiteSmoke"/>
+            <Setter Property="StrokeEndLineCap" Value="Triangle"/>
+            <Setter Property="StrokeStartLineCap" Value="Round"/>
+        </Style>
+        <Storyboard x:Key="sbStopAlarm">
+            <DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleX" BeginTime="0:0:0" Duration="0:0:2" From="0.5" To="2"
+                             AutoReverse="True" RepeatBehavior="Forever"/>
+            <DoubleAnimation Storyboard.TargetName="scaleTransform" Storyboard.TargetProperty="ScaleY" BeginTime="0:0:0" Duration="0:0:2" From="0.5" To="2"
+                             AutoReverse="True" RepeatBehavior="Forever"/>
+        </Storyboard>
+        <local:ClockHandConv x:Key="hourlyHand" ClockHand="HourlyHand"/>
+        <local:ClockHandConv x:Key="minuteHand" ClockHand="MinuteHand"/>
+        <local:ClockHandConv x:Key="secondHand" ClockHand="SecondHand"/>
+        <local:ClockHandConv x:Key="hourlyHandShadow" ClockHand="HourlyHand" Offset="315"/>
+        <local:ClockHandConv x:Key="minuteHandShadow" ClockHand="MinuteHand" Offset="315"/>
+        <local:ClockHandConv x:Key="secondHandShadow" ClockHand="SecondHand" Offset="315"/>
+        <local:ClockHandConv x:Key="pomodoroSector" ClockHand="MinuteHand"/>
+        <local:ConvTimeFormat x:Key="timeFormat"/>
+        <local:PomodoroTimeToGeometryConv x:Key="pomodoroGeometry"/>
+        <BooleanToVisibilityConverter x:Key="boolToVis"/>
+        <local:TrueAndFalseToVisibilityConv x:Key="trueFalseToVis"/>
+        <local:FalseToVisibilityConv x:Key="falseToVis"/>
+        <local:BoolToColorConv x:Key="pomodoroColor"/>
+        <local:BoolToColorConv x:Key="pomodoroDarkColor" IsDark="True"/>
+        <local:ReverseBoolConv x:Key="reverseBool"/>
+        <Image x:Key="SetAlarmIcon" Source="icons/SetAlarmIcon.png"/>
+    </Window.Resources>
+    <Canvas>
+        <Ellipse Canvas.Left="0" Canvas.Top="0" Height="400" Width="400" StrokeThickness="3" Stroke="WhiteSmoke" Opacity="0.75">
+            <Ellipse.Fill>
+                <ImageBrush ImageSource="img/Earth.png"/>
+            </Ellipse.Fill>
+        </Ellipse>
+        <Path Canvas.Left="200" Canvas.Top="195" Opacity="0.5"
+              Fill="{Binding Path=Pomodoro.IsCurrentIntervalWork, Mode=OneWay, Converter={StaticResource pomodoroColor}}"
+              Data="{Binding Path=NextPomodoroBellTimeLeft, Mode=OneWay, Converter={StaticResource pomodoroGeometry}}"
+              Visibility="{Binding Path=Pomodoro.IsPomodoroOn, Mode=OneWay, Converter={StaticResource boolToVis}}">
+            <Path.RenderTransform>
+                <RotateTransform Angle="{Binding Path=NextPomodoroBell, Mode=OneWay, Converter={StaticResource ResourceKey=minuteHand}}"/>
+            </Path.RenderTransform>
+        </Path>
+        <TextBlock Text="{Binding Path=CurrentTime, Mode=OneWay, StringFormat={}{0:dd MMMM yyyy}, ConverterCulture=pl-PL}"
+                       FontSize="18" Canvas.Left="150" Canvas.Top="70" Foreground="WhiteSmoke" TextAlignment="Center"/>
+        <TextBlock Text="{Binding Path=CurrentTime, Mode=OneWay, StringFormat={}{0:HH:mm:ss}, ConverterCulture=pl-PL}"
+                       FontSize="40" Canvas.Left="130" Canvas.Top="80" Foreground="WhiteSmoke"/>
+        <TextBlock Text="12" FontSize="75" Foreground="WhiteSmoke" Canvas.Left="160" Canvas.Top="0"/>
+        <TextBlock Text="3" FontSize="75" Foreground="WhiteSmoke" Canvas.Left="340" Canvas.Top="150"/>
+        <TextBlock Text="6" FontSize="75" Foreground="WhiteSmoke" Canvas.Left="180" Canvas.Top="310"/>
+        <TextBlock Text="9" FontSize="75" Foreground="WhiteSmoke" Canvas.Left="20" Canvas.Top="150"/>
+        <Line Canvas.Left="200" Canvas.Top="195" StrokeThickness="8" X1="0" X2="0" Y1="0" Y2="-90">
+            <Line.RenderTransform>
+                <RotateTransform Angle="{Binding Path=CurrentTime, Mode=OneWay, Converter={StaticResource ResourceKey=hourlyHand}}"/>
+            </Line.RenderTransform>
+            <Line.Effect>
+                <DropShadowEffect Direction="{Binding Path=CurrentTime, Mode=OneWay, Converter={StaticResource ResourceKey=hourlyHandShadow}}"
+                                  Opacity="0.5"/>
+            </Line.Effect>
+        </Line>
+        <Line Canvas.Left="200" Canvas.Top="195" StrokeThickness="4" X1="0" X2="0" Y1="0" Y2="-140">
+            <Line.RenderTransform>
+                <RotateTransform Angle="{Binding Path=CurrentTime, Mode=OneWay, Converter={StaticResource ResourceKey=minuteHand}}"/>
+            </Line.RenderTransform>
+            <Line.Effect>
+                <DropShadowEffect Direction="{Binding Path=CurrentTime, Mode=OneWay, Converter={StaticResource ResourceKey=minuteHandShadow}}"
+                                  Opacity="0.5"/>
+            </Line.Effect>
+        </Line>
+        <Line Canvas.Left="200" Canvas.Top="195" StrokeThickness="2" X1="0" X2="0" Y1="0" Y2="-140">
+            <Line.RenderTransform>
+                <RotateTransform Angle="{Binding Path=CurrentTime, Mode=OneWay, Converter={StaticResource ResourceKey=secondHand}}"/>
+            </Line.RenderTransform>
+            <Line.Effect>
+                <DropShadowEffect Direction="{Binding Path=CurrentTime, Mode=OneWay, Converter={StaticResource ResourceKey=secondHandShadow}}"
+                                  Opacity="0.5"/>
+            </Line.Effect>
+        </Line>
+        <Line Canvas.Left="200" Canvas.Top="195" StrokeThickness="8" X1="0" X2="0" Y1="0" Y2="-50"
+              Stroke="Maroon" Visibility="{Binding Alarm.IsSet, Mode=OneWay, Converter={StaticResource boolToVis}}">
+            <Line.RenderTransform>
+                <RotateTransform Angle="{Binding Path=Alarm.DateTime, Mode=OneWay, Converter={StaticResource ResourceKey=hourlyHand}}"/>
+            </Line.RenderTransform>
+            <Line.Effect>
+                <DropShadowEffect Direction="{Binding Path=Alarm.DateTime, Mode=OneWay, Converter={StaticResource ResourceKey=hourlyHandShadow}}"
+                                  Opacity="0.5"/>
+            </Line.Effect>
+        </Line>
+        <Ellipse Canvas.Left="190" Canvas.Top="185" Height="20" Width="20" Fill="WhiteSmoke" Stroke="WhiteSmoke">
+            <Ellipse.Effect>
+                <DropShadowEffect Direction="305" Opacity="0.5"/>
+            </Ellipse.Effect>
+        </Ellipse>
+        <Button x:Name="btnAlarm" ToolTip="Click here to on/off an alarm"
+                Canvas.Left="255" Canvas.Top="250" Height="45" Background="Transparent" BorderBrush="Transparent"
+                Visibility="{Binding Path=IsAlarmPlaying, Converter={StaticResource falseToVis}}"
+                Command="{Binding ElementName=alarmDB, Path=Show}">
+            <Button.Content>
+                <Image Source="icons/SetAlarmIcon.png"/>
+            </Button.Content>
+        </Button>
+        <Button x:Name="btnAlarmStop" ToolTip="Click here to stop an alarm"
+                Canvas.Left="255" Canvas.Top="250" Height="45" Background="Transparent" BorderBrush="Transparent"
+                RenderTransformOrigin="0.5,0.5"
+                Visibility="{Binding Path=IsAlarmPlaying, Mode=OneWay, Converter={StaticResource boolToVis}}"
+                Command="{Binding Path=StopAlarmCommand}">
+            <Button.Content>
+                <Image Source="icons/StopAlarmIcon.png"/>
+            </Button.Content>
+            <Button.RenderTransform>
+                <ScaleTransform x:Name="scaleTransform" ScaleX="0.75" ScaleY="0.75"/>
+            </Button.RenderTransform>
+            <Button.Triggers>
+                <EventTrigger RoutedEvent="Button.Loaded">
+                    <BeginStoryboard Storyboard="{StaticResource sbStopAlarm}"/>
+                </EventTrigger>
+            </Button.Triggers>
+        </Button>
+        <Button x:Name="btnPomodoro" ToolTip="Click here to start a pomodoro"
+                Canvas.Left="110" Canvas.Top="250" Height="45" Background="Transparent" BorderBrush="Transparent"
+                Visibility="{Binding Path=Pomodoro.IsPomodoroOn, Converter={StaticResource falseToVis}}"
+                Command="{Binding PlayPomodoroCommand}">
+            <Button.Content>
+                <Image Source="icons/PomodoroIcon.png"/>
+            </Button.Content>
+        </Button>
+        <Button x:Name="btnPomodoroSettings" ToolTip="Click here to set pomodoro time, breaks time and number of reps"
+                Canvas.Left="150" Canvas.Top="240" Height="20" Background="Transparent" BorderBrush="Transparent"
+                Visibility="{Binding Path=Pomodoro.IsPomodoroOn, Converter={StaticResource falseToVis}}"
+                Command="{Binding ElementName=pomodoroSettingsDB, Path=Show}">
+            <Button.Content>
+                <Image Source="icons/SettingsIcon.png"/>
+            </Button.Content>
+        </Button>
+        <Button x:Name="btnPomodoroStop" ToolTip="Click here to stop a pomodoro"
+                Canvas.Left="110" Canvas.Top="250" Height="45" Background="Transparent" BorderBrush="Transparent"
+                Command="{Binding StopPomodoroCommand}"
+                Visibility="{Binding Path=Pomodoro.IsPomodoroOn, Mode=OneWay, Converter={StaticResource boolToVis}}">
+            <Button.Content>
+                <Image Source="icons/StopPomodoroIcon.png"/>
+            </Button.Content>
+        </Button>
+        <Button x:Name="btnPomodoroSkip" ToolTip="Click here to skip the break"
+                Canvas.Left="128" Canvas.Top="334" Height="20" Background="Transparent" BorderBrush="Transparent"
+                Command="{Binding SkipPomodoroCommand}">
+            <Button.Content>
+                <Image Source="icons/SkipPomodoroIcon.png"/>
+            </Button.Content>
+            <Button.Visibility>
+                <MultiBinding Converter="{StaticResource trueFalseToVis}">
+                    <Binding Path="Pomodoro.IsPomodoroOn"/>
+                    <Binding Path="Pomodoro.IsCurrentIntervalWork"/>
+                </MultiBinding>
+            </Button.Visibility>
+        </Button>
+        <TextBlock Canvas.Left="105" Canvas.Top="299" TextAlignment="Center" FontSize="16" FontWeight="DemiBold"
+                   Visibility="{Binding Path=Pomodoro.IsPomodoroOn, Mode=OneWay, Converter={StaticResource boolToVis}}">
+            <Run Text="{Binding NextPomodoroBellTimeLeft, Mode=OneWay, StringFormat=\{0:h\\:mm\\:ss\}}"/>
+            <LineBreak/>
+                <Run Text="{Binding Path=Pomodoro.RepsCount, Mode=OneWay}" Foreground="{Binding Path=Pomodoro.IsCurrentIntervalWork, Mode=OneWay, Converter={StaticResource pomodoroDarkColor}}"/>
+                <Run Text="DONE" Foreground="{Binding Path=Pomodoro.IsCurrentIntervalWork, Mode=OneWay, Converter={StaticResource pomodoroDarkColor}}"/>
+        </TextBlock>
+        <TextBlock Canvas.Left="247" Canvas.Top="299" FontSize="16" FontWeight="DemiBold"
+                   Text="{Binding Alarm.DateTime, Mode=OneWay, StringFormat={}{0:HH:mm:ss}}">
+            <TextBlock.Visibility>
+                <MultiBinding Converter="{StaticResource trueFalseToVis}">
+                    <Binding Path="Alarm.IsSet"/>
+                    <Binding Path="IsAlarmPlaying"/>
+                </MultiBinding>
+            </TextBlock.Visibility>
+        </TextBlock>
+        <Button x:Name="btnClose" ToolTip="Click here to close an app"
+                Canvas.Left="355" Canvas.Top="25" Height="25" Background="Transparent" BorderBrush="Transparent"
+                Command="{Binding CloseCommand}">
+            <Button.Content>
+                <Image Source="icons/ClosingIcon.png"/>
+            </Button.Content>
+        </Button>
+        <Button x:Name="btnShowInfo" ToolTip="Click here to see an info about XClock"
+                Canvas.Left="330" Canvas.Top="15" Height="20" Background="Transparent" BorderBrush="Transparent"
+                Command="{Binding ElementName=infoDB, Path=Show}"
+                CommandParameter="Welcome to Xowalski's Clock -XClock&#x0a;Author: Konrad K. Kowalski 2021&#x0a;Contact: konrad.kowalski1991@o2.pl&#x0a;github.com/Xowalski&#x0a;&#x0a;
+                &#x0a;Click on icon shaped like a tomato timer or press P to play the pomodoro&#x0a;Click on icon shaped like a gear or press S to change to pomodoro settings&#x0a;Click on icon shaped like clock or press A to set an alarm&#x0a;
+                ">
+            <Button.Content>
+                <Image Source="icons/InfoIcon.png"/>
+            </Button.Content>
+        </Button>
+        <vm:MessageDialogBox x:Name="infoDB" CanExecuteShow="True" Caption="Xclock information"/>
+        <vm:CustomContentDialogBox  x:Name="alarmDB" Caption="Set Alarm" WindowHeight="200" WindowWidth="350"
+                                   WindowResizeMode="NoResize" WindowStyle="None" CanExecuteShow="{Binding IsAlarmPlaying, Converter={StaticResource reverseBool}}"
+                                   CommandTrue="{Binding SetAlarmCommand}" CommandFalse="{Binding TurnOffAlarmCommand}">
+            <vm:CustomContentDialogBox.Resources>
+                <local:StringsToDateTimeConv x:Key="dateTimeConv"/>
+            </vm:CustomContentDialogBox.Resources>
+            <vm:CustomContentDialogBox.CommandParameter >
+                <MultiBinding Mode="OneWay" Converter="{StaticResource dateTimeConv}">
+                    <Binding ElementName="tbSetAlarmHour" Path="Text"/>
+                    <Binding ElementName="tbSetAlarmMinute" Path="Text"/>
+                    <Binding ElementName="tbSetAlarmSecond" Path="Text"/>
+                </MultiBinding>
+            </vm:CustomContentDialogBox.CommandParameter>
+            <StackPanel Height="200" Width="350" Background="WhiteSmoke" VerticalAlignment="Center">
+                <StackPanel.DataContext>
+                    <vm:XClockVM/>
+                </StackPanel.DataContext>
+                <StackPanel.Resources>
+                    <Style TargetType="TextBox">
+                        <Setter Property="Margin" Value="0, 10"/>
+                        <Setter Property="MinWidth" Value="20"/>
+                        <Setter Property="Background" Value="WhiteSmoke"/>
+                        <Setter Property="FontFamily" Value="Calibri"/>
+                        <Setter Property="FontSize" Value="25"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                    </Style>
+                    <Style TargetType="Label">
+                        <Setter Property="Margin" Value="0, 10"/>
+                        <Setter Property="Background" Value="WhiteSmoke"/>
+                        <Setter Property="FontFamily" Value="Calibri"/>
+                        <Setter Property="FontSize" Value="25"/>
+                    </Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Margin" Value="0, 10"/>
+                        <Setter Property="Background" Value="WhiteSmoke"/>
+                        <Setter Property="FontFamily" Value="Calibri"/>
+                        <Setter Property="FontSize" Value="12"/>
+                        <Setter Property="TextAlignment" Value="Left"/>
+                    </Style>
+                </StackPanel.Resources>
+                <TextBlock Text="Set Alarm Time" Margin="25, 35, 0, 0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBox x:Name="tbSetAlarmHour"
+                             Text="{Binding Alarm.DateTime.Hour, Mode=OneWay, Converter={StaticResource timeFormat}}">
+                        <i:Interaction.Behaviors>
+                            <local:BehEmptyTextBoxOnFocus/>
+                            <local:BehOnlyMaxIntTextBoxInput MaxInt="24"/>
+                            <local:BehTimeFormat/>
+                            <local:BehAutoMoveFocus MaxFirstDigit="2"/>
+                        </i:Interaction.Behaviors>
+                    </TextBox>
+                    <Label Content=":"/>
+                    <TextBox x:Name="tbSetAlarmMinute"
+                             Text="{Binding Alarm.DateTime.Minute, Mode=OneWay, Converter={StaticResource timeFormat}}">
+                        <i:Interaction.Behaviors>
+                            <local:BehEmptyTextBoxOnFocus/>
+                            <local:BehOnlyMaxIntTextBoxInput MaxInt="60"/>
+                            <local:BehTimeFormat/>
+                            <local:BehAutoMoveFocus MaxFirstDigit="5"/>
+                        </i:Interaction.Behaviors>
+                    </TextBox>
+                    <Label Content=":"/>
+                    <TextBox x:Name="tbSetAlarmSecond"
+                             Text="{Binding Alarm.DateTime.Second, Mode=OneWay, Converter={StaticResource timeFormat}}">
+                        <i:Interaction.Behaviors>
+                            <local:BehEmptyTextBoxOnFocus/>
+                            <local:BehOnlyMaxIntTextBoxInput MaxInt="60"/>
+                            <local:BehTimeFormat/>
+                        </i:Interaction.Behaviors>
+                    </TextBox>
+                </StackPanel>
+                <StackPanel Margin="0, 10, 35, 15" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Alarm Off" Margin="5" MinWidth="75"
+                            vm:CustomContentDialogBox.CustomContentDialogResult="False"/>
+                    <Button Content="Alarm On" Margin="5" MinWidth="75"
+                            vm:CustomContentDialogBox.CustomContentDialogResult="True"/>
+                </StackPanel>
+            </StackPanel>
+        </vm:CustomContentDialogBox>
+        <vm:CustomContentDialogBox x:Name="pomodoroSettingsDB" Caption="SetPomodoro" WindowHeight="200" WindowWidth="350"
+                                   WindowResizeMode="NoResize" CanExecuteShow="{Binding Pomodoro.IsPomodoroOn, Converter={StaticResource reverseBool}}"
+                                   CommandTrue="{Binding ChangePomodoroSettingsCommand}">
+            <vm:CustomContentDialogBox.Resources>
+                <local:StringsToPomodoroConv x:Key="stringsToPomodoroConv"/>
+            </vm:CustomContentDialogBox.Resources>
+            <vm:CustomContentDialogBox.CommandParameter>
+                <MultiBinding Mode="OneWay" Converter="{StaticResource stringsToPomodoroConv}">
+                    <Binding ElementName="tbWorkTime" Path="Text"/>
+                    <Binding ElementName="tbShortBreakTime" Path="Text"/>
+                    <Binding ElementName="tbLongBreakTime" Path="Text"/>
+                    <Binding ElementName="tbRepsNum" Path="Text"/>
+                </MultiBinding>
+            </vm:CustomContentDialogBox.CommandParameter>
+            <StackPanel Height="200" Width="350" Background="WhiteSmoke" VerticalAlignment="Center" Orientation="Vertical">
+                <StackPanel.DataContext>
+                    <vm:XClockVM/>
+                </StackPanel.DataContext>
+                <StackPanel.Resources>
+                    <Style TargetType="TextBox">
+                        <Setter Property="Margin" Value="0, 10"/>
+                        <Setter Property="Width" Value="40"/>
+                        <Setter Property="Background" Value="WhiteSmoke"/>
+                        <Setter Property="FontFamily" Value="Calibri"/>
+                        <Setter Property="FontSize" Value="25"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="TextAlignment" Value="Center"/>
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                    </Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Margin" Value="0, 0, 0, 10"/>
+                        <Setter Property="Background" Value="WhiteSmoke"/>
+                        <Setter Property="FontFamily" Value="Calibri"/>
+                        <Setter Property="FontSize" Value="12"/>
+                        <Setter Property="TextAlignment" Value="Center"/>
+                    </Style>
+                </StackPanel.Resources>
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Margin="10, 15, 5, 5">
+                        <TextBox x:Name="tbWorkTime" Text="{Binding Path=Pomodoro.WorkTime}">
+                            <i:Interaction.Behaviors>
+                                <local:BehEmptyTextBoxOnFocus/>
+                                <local:BehOnlyMaxIntTextBoxInput MaxInt="95"/>
+                                <local:BehAutoMoveFocus MaxFirstDigit="9"/>
+                            </i:Interaction.Behaviors>
+                        </TextBox>
+                        <TextBlock HorizontalAlignment="Center">
+                        Pomodoro<LineBreak/>Duration<LineBreak/>(max. 90min)
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Margin="5, 15, 5, 5">
+                        <TextBox x:Name="tbShortBreakTime" Text="{Binding Path=Pomodoro.ShortBreakTime}">
+                            <i:Interaction.Behaviors>
+                                <local:BehEmptyTextBoxOnFocus/>
+                                <local:BehOnlyMaxIntTextBoxInput MaxInt="35"/>
+                                <local:BehAutoMoveFocus MaxFirstDigit="3"/>
+                            </i:Interaction.Behaviors>
+                        </TextBox>
+                        <TextBlock HorizontalAlignment="Center">
+                        Short Break<LineBreak/>Duration<LineBreak/>(max. 35 min)
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Margin="5, 15, 5, 5">
+                        <TextBox x:Name="tbLongBreakTime" Text="{Binding Path=Pomodoro.LongBreakTime}">
+                            <i:Interaction.Behaviors>
+                                <local:BehEmptyTextBoxOnFocus/>
+                                <local:BehOnlyMaxIntTextBoxInput MaxInt="95"/>
+                                <local:BehAutoMoveFocus MaxFirstDigit="9"/>
+                            </i:Interaction.Behaviors>
+                        </TextBox>
+                        <TextBlock HorizontalAlignment="Center">
+                        Long Break<LineBreak/>Duration<LineBreak/>(max. 95 min)
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Margin="5, 15, 10, 5">
+                        <TextBox x:Name="tbRepsNum" Text="{Binding Path=Pomodoro.Reps}">
+                            <i:Interaction.Behaviors>
+                                <local:BehEmptyTextBoxOnFocus/>
+                                <local:BehOnlyMaxIntTextBoxInput MaxInt="12"/>
+                                <local:BehAutoMoveFocus MaxFirstDigit="1"/>
+                            </i:Interaction.Behaviors>
+                        </TextBox>
+                        <TextBlock HorizontalAlignment="Center">
+                        Number of<LineBreak/>pomodoros<LineBreak/>(max 12 repeats)
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Margin="0, 0, 25, 15" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Cancel" Margin="5" MinWidth="75"
+                            vm:CustomContentDialogBox.CustomContentDialogResult="False"/>
+                    <Button Content="OK" Margin="5" MinWidth="75"
+                            vm:CustomContentDialogBox.CustomContentDialogResult="True"/>
+                </StackPanel>
+            </StackPanel>
+        </vm:CustomContentDialogBox>
+        <vm:OpenFileDialogBox x:Name="openAudioFileDB" Caption="Wybierz plik audio:"
+                                  FilePath="{Binding ElementName=tbfilePath, Path=Text, Mode=TwoWay}"
+                                  Filter="Pliki tekstowe (*.mp3)|*.mp3|Wszystkie pliki (*.*)|*.*" FilterIndex="0"
+                                  DefaultExtension="mp3" CommandFileOK="{Binding OpenFile}"/>
+    </Canvas>
+</Window>

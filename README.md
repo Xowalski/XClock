@@ -1,2 +1,2 @@
 # XClock
-WPF MVVM Clock app with pomodoro technique timer
+.NET WPF MVVM Clock app with pomodoro technique timer
